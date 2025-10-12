@@ -7,3 +7,10 @@ requires-python = ">=3.12"
 dependencies = [
     "pyexiftool>=0.5.6",
 ]
+
+[project.scripts]
+photo-scripts = "photo_scripts:photo"
+
+[build-system]
+requires = ["uv_build>=0.9.2,<0.10.0"]
+build-backend = "uv_build"
