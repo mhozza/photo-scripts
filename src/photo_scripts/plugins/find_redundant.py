@@ -5,7 +5,7 @@ import os
 REDUNDANT_SUFFIXES = ["-Enhanced.dng"]
 
 def register_subcommand(subparsers):
-    parser = subparsers.add_parser("find-redundant-dng", help="Find redundant DNG files.")
+    parser = subparsers.add_parser("find-redundant", help="Find redundant DNG files.")
     parser.add_argument("directory", type=Path, help="Directory to search for redundant DNGs.")
     parser.set_defaults(func=find_redundant_dng)
 
