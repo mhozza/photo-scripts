@@ -1,6 +1,6 @@
 
 import os
-from libs import exif
+from photo_scripts.libs import exif
 
 PATTERN_SUFFIX = "_{index:04}.jpg"
 OUTPUT_DATE_FORMAT = "%Y_%m_%d_%H%M%S"

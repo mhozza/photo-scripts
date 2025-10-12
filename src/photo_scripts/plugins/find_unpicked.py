@@ -1,6 +1,6 @@
 
 from pathlib import Path
-from libs import lrcatalogue
+from photo_scripts.libs import lrcatalogue
 
 def register_subcommand(subparsers):
     parser = subparsers.add_parser("find-unpicked", help="Find unpicked photos in a Lightroom catalog.")

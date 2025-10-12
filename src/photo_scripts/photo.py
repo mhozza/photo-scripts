@@ -12,7 +12,7 @@ def main():
     # Discover and load plugins
     plugins_dir = os.path.join(os.path.dirname(__file__), "plugins")
     for _, name, _ in pkgutil.iter_modules([plugins_dir]):
-        plugin = importlib.import_module(f"plugins.{name}")
+        plugin = importlib.import_module(f"photo_scripts.plugins.{name}")
         if hasattr(plugin, "register_subcommand"):
             plugin.register_subcommand(subparsers)
 

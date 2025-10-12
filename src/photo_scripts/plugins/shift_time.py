@@ -1,7 +1,7 @@
 
 from datetime import timedelta
 from os.path import basename
-from libs import exif
+from photo_scripts.libs import exif
 
 def register_subcommand(subparsers):
     parser = subparsers.add_parser("shift-time", help="Shift exif DateTimeOriginal by time")
