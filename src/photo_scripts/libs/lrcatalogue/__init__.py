@@ -71,11 +71,11 @@ def _get_photos_metadata(conn: sqlite3.Connection) -> dict:
             metadata[photo_id] = new_metadata
     return metadata
 
-def get_unpicked_photos(lrcat_path: Path, directory_mapping: dict = None) -> list:
+def get_all_photos(lrcat_path: Path, directory_mapping: dict = None) -> list:
     if directory_mapping is None:
         directory_mapping = {}
     
-    unpicked_photos = []
+    all_photos = []
     try:
         with sqlite3.connect(lrcat_path) as conn:
             root_folders = _get_root_folders(conn, directory_mapping)
@@ -88,9 +88,16 @@ def get_unpicked_photos(lrcat_path: Path, directory_mapping: dict = None) -> lis
                 photo_id, folder_id, filename = row
                 if photo_id in metadata:
                     photo_metadata = metadata[photo_id]
-                    if photo_metadata.picked != Picked.PICKED and photo_metadata.rating is None:
-                        path = folders[folder_id] / filename
-                        unpicked_photos.append(Photo(photo_id, path, photo_metadata))
+                    path = folders[folder_id] / filename
+                    all_photos.append(Photo(photo_id, path, photo_metadata))
     except sqlite3.Error as e:
         print(f"Database error: {e}")
+    return all_photos
+
+def get_unpicked_photos(lrcat_path: Path, directory_mapping: dict = None) -> list:
+    all_photos = get_all_photos(lrcat_path, directory_mapping)
+    unpicked_photos = []
+    for photo in all_photos:
+        if photo.metadata.picked != Picked.PICKED and photo.metadata.rating is None:
+            unpicked_photos.append(photo)
     return unpicked_photos
