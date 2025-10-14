@@ -13,7 +13,6 @@ def find_catalogue_root(paths):
 def register_subcommand(subparsers):
     parser = subparsers.add_parser("find-unpicked", help="Find unpicked photos in a Lightroom catalog.")
     parser.add_argument("lrcat_path", type=Path, help="Path to the .lrcat file.")
-    parser.add_argument("-m", "--directory-mapping", nargs=2, action='append', help="Directory mapping from source to destination, e.g. -m /src /dst")
     parser.add_argument("--catalogue-root", type=Path, help="Path to the catalogue root. If not specified, it will be autodetected as the lowest common ancestor of all photo paths.")
     parser.add_argument("--full-path", action="store_true", default=False, help="Output the full absolute path for the files.")
     parser.set_defaults(func=find_unpicked)
@@ -44,34 +43,46 @@ def collect_unpicked_files(all_photos, virtually_picked_raws):
             unpicked_files.append(photo.path)
     return unpicked_files
 
-def print_unpicked_files(unpicked_files, catalogue_root):
+def filter_photos_by_catalogue_root(all_photos, catalogue_root):
+    if not catalogue_root:
+        return all_photos
+
+    filtered_photos = []
+    for photo in all_photos:
+        try:
+            photo.path.relative_to(catalogue_root)
+            filtered_photos.append(photo)
+        except ValueError:
+            print(f"Warning: {photo.path} is not inside the catalogue root {catalogue_root}. Skipping.", file=sys.stderr)
+    
+    return filtered_photos
+
+def print_unpicked_files(unpicked_files, catalogue_root, full_path):
     for path in unpicked_files:
-        if not catalogue_root:
+        if full_path or not catalogue_root:
             print(path)
         else:
-            try:
-                print(path.relative_to(catalogue_root))
-            except ValueError:
-                print(f"Warning: {path} is not inside the catalogue root {catalogue_root}. Printing full path.", file=sys.stderr)
-                print(path)
+            print(path.relative_to(catalogue_root))
 
 def find_unpicked(args):
-    directory_mapping = {src: dst for src, dst in args.directory_mapping} if args.directory_mapping else {}
-    all_photos = lrcatalogue.get_all_photos(args.lrcat_path, directory_mapping)
-    
-    full_path = args.full_path
-    catalogue_root = None if full_path else determine_catalogue_root(args.catalogue_root, all_photos)
-    print(f"Catalogue root: {catalogue_root}, catalogue_root_arg: {args.catalogue_root}", file=sys.stderr)
-    
-    photos_by_path = {photo.path: photo for photo in all_photos}
-    virtually_picked_raws = find_virtually_picked_raws(all_photos, photos_by_path)
-    
-    unpicked_files = collect_unpicked_files(all_photos, virtually_picked_raws)
-    
-    print_unpicked_files(unpicked_files, catalogue_root)
+    all_photos_from_db = lrcatalogue.get_all_photos(args.lrcat_path)
+    scanned_count = len(all_photos_from_db)
 
-    scanned_count = len(all_photos)
+    full_path = args.full_path
+    catalogue_root = determine_catalogue_root(args.catalogue_root, all_photos_from_db)
+
+    photos_in_root = filter_photos_by_catalogue_root(all_photos_from_db, catalogue_root)
+    filtered_count = scanned_count - len(photos_in_root)
+
+    photos_by_path = {photo.path: photo for photo in photos_in_root}
+    virtually_picked_raws = find_virtually_picked_raws(photos_in_root, photos_by_path)
+    
+    unpicked_files = collect_unpicked_files(photos_in_root, virtually_picked_raws)
+    
+    print_unpicked_files(unpicked_files, catalogue_root, full_path)
+
     virtually_picked_count = len(virtually_picked_raws)
     print(f"\nScanned {scanned_count} files.", file=sys.stderr)
+    print(f"Filtered out {filtered_count} files not in catalogue root.", file=sys.stderr)
     print(f"Found {len(unpicked_files)} unpicked files.", file=sys.stderr)
     print(f"Found {virtually_picked_count} unpicked files with a picked enhanced file.", file=sys.stderr)

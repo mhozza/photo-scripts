@@ -1,4 +1,3 @@
-
 import sqlite3
 from pathlib import Path
 from enum import Enum
@@ -41,17 +40,10 @@ class Photo:
     path: Path
     metadata: PhotoMetadata
 
-def _map_directories(path_str: str, directory_mapping: dict) -> str:
-    for src, dst in directory_mapping.items():
-        if path_str.startswith(src):
-            return path_str.replace(src, dst, 1)
-    print(f"Directory '{path_str}' not mapped to anything.")
-    return path_str
-
-def _get_root_folders(conn: sqlite3.Connection, directory_mapping: dict) -> dict:
+def _get_root_folders(conn: sqlite3.Connection) -> dict:
     cursor = conn.cursor()
     cursor.execute("SELECT id_local, absolutePath FROM AgLibraryRootFolder")
-    return {row[0]: Path(_map_directories(row[1], directory_mapping)) for row in cursor.fetchall()}
+    return {row[0]: Path(row[1]) for row in cursor.fetchall()}
 
 def _get_folders(conn: sqlite3.Connection, root_folders: dict) -> dict:
     cursor = conn.cursor()
@@ -71,14 +63,11 @@ def _get_photos_metadata(conn: sqlite3.Connection) -> dict:
             metadata[photo_id] = new_metadata
     return metadata
 
-def get_all_photos(lrcat_path: Path, directory_mapping: dict = None) -> list:
-    if directory_mapping is None:
-        directory_mapping = {}
-    
+def get_all_photos(lrcat_path: Path) -> list:
     all_photos = []
     try:
         with sqlite3.connect(lrcat_path) as conn:
-            root_folders = _get_root_folders(conn, directory_mapping)
+            root_folders = _get_root_folders(conn)
             folders = _get_folders(conn, root_folders)
             metadata = _get_photos_metadata(conn)
             
@@ -94,8 +83,8 @@ def get_all_photos(lrcat_path: Path, directory_mapping: dict = None) -> list:
         print(f"Database error: {e}")
     return all_photos
 
-def get_unpicked_photos(lrcat_path: Path, directory_mapping: dict = None) -> list:
-    all_photos = get_all_photos(lrcat_path, directory_mapping)
+def get_unpicked_photos(lrcat_path: Path) -> list:
+    all_photos = get_all_photos(lrcat_path)
     unpicked_photos = []
     for photo in all_photos:
         if photo.metadata.picked != Picked.PICKED and photo.metadata.rating is None:
