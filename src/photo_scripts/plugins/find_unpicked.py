@@ -8,7 +8,7 @@ ENHANCED_SUFFIX = "-Enhanced-NR.dng"
 def find_catalogue_root(paths):
     if not paths:
         return None
-    return Path(os.path.commonprefix([str(p) for p in paths]))
+    return Path(os.path.commonpath([str(p) for p in paths]))
 
 def register_subcommand(subparsers):
     parser = subparsers.add_parser("find-unpicked", help="Find unpicked photos in a Lightroom catalog.")
@@ -27,19 +27,21 @@ def determine_catalogue_root(catalogue_root_arg, all_photos):
 def find_virtually_picked_raws(all_photos, photos_by_path):
     virtually_picked_raws = set()
     for photo in all_photos:
-        if photo.path.suffix.lower() in ['.cr2', '.cr3'] and photo.metadata.picked == lrcatalogue.Picked.UNPICKED:
+        is_unpicked = all(vc.metadata.picked == lrcatalogue.Picked.UNPICKED for vc in photo.virtual_copies)
+        if photo.path.suffix.lower() in ['.cr2', '.cr3'] and is_unpicked:
             enhanced_dng_path = photo.path.with_name(f"{photo.path.stem}{ENHANCED_SUFFIX}")
             if enhanced_dng_path in photos_by_path:
                 enhanced_photo = photos_by_path[enhanced_dng_path]
-                if enhanced_photo.metadata.picked == lrcatalogue.Picked.PICKED:
+                if any(vc.metadata.picked == lrcatalogue.Picked.PICKED for vc in enhanced_photo.virtual_copies):
                     virtually_picked_raws.add(photo.path)
-                    print(f"Warning: {photo.path} is unpicked, but the corresponding enhanced file {enhanced_photo.path} is picked.", file=sys.stderr)
+                    print(f"Warning: {photo.path} is unpicked, but at least one virtual copy of the corresponding enhanced file {enhanced_photo.path} is picked.", file=sys.stderr)
     return virtually_picked_raws
 
 def collect_unpicked_files(all_photos, virtually_picked_raws):
     unpicked_files = []
     for photo in all_photos:
-        if photo.metadata.picked == lrcatalogue.Picked.UNPICKED and photo.path not in virtually_picked_raws:
+        is_unpicked = all(vc.metadata.picked == lrcatalogue.Picked.UNPICKED for vc in photo.virtual_copies)
+        if is_unpicked and photo.path not in virtually_picked_raws:
             unpicked_files.append(photo.path)
     return unpicked_files
 
