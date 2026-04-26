@@ -22,23 +22,29 @@ def clean_raws(args):
     else:
         all_files = folder.glob("*")
 
-    jpg_files = []
-    cr3_files = []
+    jpg_files = {}
+    cr3_files = {}
     for f in all_files:
         if not f.is_file():
             continue
         ext = f.suffix.lower()
+        stem = f.stem.lower()
         if ext in JPEG_EXTS:
-            jpg_files.append(f)
+            if stem in jpg_files:
+                print(f"Error: Duplicate JPEG file name found:\n  {jpg_files[stem]}\n  {f}\nAborting to prevent accidental deletions.", file=sys.stderr)
+                sys.exit(1)
+            jpg_files[stem] = f
         elif ext in RAW_EXTS:
-            cr3_files.append(f)
+            if stem in cr3_files:
+                print(f"Error: Duplicate RAW file name found:\n  {cr3_files[stem]}\n  {f}\nAborting to prevent accidental deletions.", file=sys.stderr)
+                sys.exit(1)
+            cr3_files[stem] = f
 
-    # To efficiently match them, store jpegs by their parent directory and stem
-    jpg_keys = {(f.parent, f.stem.lower()) for f in jpg_files}
+    jpg_keys = set(jpg_files.keys())
 
     to_delete = []
-    for cr3 in cr3_files:
-        if (cr3.parent, cr3.stem.lower()) not in jpg_keys:
+    for stem, cr3 in cr3_files.items():
+        if stem not in jpg_keys:
             to_delete.append(cr3)
 
     if not to_delete:
