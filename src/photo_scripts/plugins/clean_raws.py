@@ -50,7 +50,7 @@ def clean_raws(args):
         print(f"  {f}")
 
     try:
-        confirmation = input("Do you want to delete these files? [y/N]: ")
+        confirmation = input(f"Do you want to delete these {len(to_delete)} files? [y/N]: ")
         if confirmation.lower() in ('y', 'yes'):
             for f in to_delete:
                 try:
